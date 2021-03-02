@@ -1,5 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { AppThunk, RootState } from '../../app/store';
+import axios from "axios";
+import { undo } from '../../app/undo.reducer-enhancer';
 
 interface CounterState {
   value: number;
@@ -14,33 +16,44 @@ export const counterSlice = createSlice({
   initialState,
   reducers: {
     increment: state => {
-      // Redux Toolkit allows us to write "mutating" logic in reducers. It
-      // doesn't actually mutate the state because it uses the Immer library,
-      // which detects changes to a "draft state" and produces a brand new
-      // immutable state based off those changes
-      state.value += 1;
+      state.value++;
     },
     decrement: state => {
-      state.value -= 1;
-    },
-    // Use the PayloadAction type to declare the contents of `action.payload`
-    incrementByAmount: (state, action: PayloadAction<number>) => {
-      state.value += action.payload;
-    },
+      state.value--;
+    }
   },
 });
 
-export const { increment, decrement, incrementByAmount } = counterSlice.actions;
+export const { increment, decrement } = counterSlice.actions;
 
 // The function below is called a thunk and allows us to perform async logic. It
 // can be dispatched like a regular action: `dispatch(incrementAsync(10))`. This
 // will call the thunk with the `dispatch` function as the first argument. Async
 // code can then be executed and other actions can be dispatched
-export const incrementAsync = (amount: number): AppThunk => dispatch => {
-  setTimeout(() => {
-    dispatch(incrementByAmount(amount));
-  }, 1000);
+export const incrementOptimistic = (): AppThunk => async dispatch => {
+  const optimisticAction = increment();
+  dispatch(optimisticAction);
+  try {
+    await simulateCallServer();
+  } catch (error) {
+    console.log("There was an error... undoing")
+    dispatch(undo(optimisticAction));
+  }
 };
+
+export const simulateCallServer = () => new Promise<void>((resolve, reject) => {
+  //Between 0.5 and 3 second random delay
+  const delay = Math.floor((Math.random() * 2.5) + 0.5) * 1000;
+  //with 30% chance of failure
+  const willFail = Math.random() < 0.3;
+  setTimeout(() => {
+    if (willFail) {
+      reject()
+    } else {
+      resolve()
+    }
+  }, delay);
+})
 
 // The function below is called a selector and allows us to select a value from
 // the state. Selectors can also be defined inline where they're used instead of

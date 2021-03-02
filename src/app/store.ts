@@ -1,10 +1,11 @@
 import { configureStore, ThunkAction, Action } from '@reduxjs/toolkit';
 import counterReducer from '../features/counter/counterSlice';
+import { undoable } from './undo.reducer-enhancer';
 
 export const store = configureStore({
   reducer: {
-    counter: counterReducer,
-  },
+    counter: undoable(counterReducer),
+  }
 });
 
 export type RootState = ReturnType<typeof store.getState>;
